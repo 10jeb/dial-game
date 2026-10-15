@@ -1,0 +1,236 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dial In</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one centered instrument card — target readout above, semicircle gauge, result strip and controls below, round tracker at the foot */
+:root{
+  --bg:#e9edf2;
+  --face:#f8fafc;
+  --ink:#16202e;
+  --muted:#5b6778;
+  --rule:#c9d1dc;
+  --needle:#d9480f;
+  --target:#1c7c6d;
+  --track:#dfe5ec;
+  --good:#1c7c6d; --ok:#b7791f; --bad:#c2410c;
+  --font-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151d;--face:#18212c;--ink:#e6ebf1;--muted:#93a0b2;--rule:#2c3a4b;
+  --needle:#ff7a3d;--target:#3fbfa8;--track:#223040;
+  --good:#3fbfa8;--ok:#e3a83c;--bad:#ff7a3d;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151d;--face:#18212c;--ink:#e6ebf1;--muted:#93a0b2;--rule:#2c3a4b;
+  --needle:#ff7a3d;--target:#3fbfa8;--track:#223040;
+  --good:#3fbfa8;--ok:#e3a83c;--bad:#ff7a3d;color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:24px;box-sizing:border-box;display:flex;justify-content:center;align-items:flex-start}
+.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--font-display);font-weight:900;font-size:2rem;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.meta{font-family:var(--font-mono);font-size:.8rem;color:var(--muted);display:flex;gap:16px;font-variant-numeric:tabular-nums}
+.meta b{color:var(--ink);font-weight:500}
+
+.card{background:var(--face);border:1px solid var(--rule);border-radius:18px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.target{font-family:var(--font-display);font-weight:900;font-size:clamp(4rem,18vw,6.5rem);line-height:.9;font-variant-numeric:tabular-nums;color:var(--ink)}
+.target small{font-size:.45em;color:var(--muted);margin-left:2px}
+
+.dial{width:100%;max-width:440px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;outline:none;border-radius:12px}
+.dial.dragging{cursor:grabbing}
+.dial:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--needle) 45%,transparent)}
+.dial .arc{fill:none;stroke:var(--track);stroke-width:26}
+.dial .tick{stroke:var(--muted);stroke-width:2}
+.dial .end{font-family:var(--font-mono);font-size:14px;fill:var(--muted)}
+.dial .needle{stroke:var(--needle);stroke-width:5;stroke-linecap:round}
+.dial .hub{fill:var(--needle)}
+.dial .hubcap{fill:var(--face)}
+.dial .ghost{stroke:var(--target);stroke-width:4;stroke-linecap:round;stroke-dasharray:2 8}
+.dial .wedge{fill:color-mix(in srgb,var(--needle) 22%,transparent)}
+.dial .grip{fill:var(--needle)}
+
+.result{min-height:3.2em;display:flex;align-items:center;justify-content:center;text-align:center;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.result .hint{color:var(--muted);font-size:.95rem}
+.stat{display:flex;flex-direction:column;align-items:center}
+.stat span{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat b{font-family:var(--font-mono);font-weight:500;font-size:1.15rem}
+.pts{font-family:var(--font-display);font-weight:900;font-size:2rem;line-height:1}
+.pts.good{color:var(--good)}.pts.ok{color:var(--ok)}.pts.bad{color:var(--bad)}
+
+.btn{font:600 1rem var(--font-body);border:0;border-radius:999px;padding:12px 30px;background:var(--ink);color:var(--face);cursor:pointer;min-width:180px}
+.btn:hover{opacity:.88}
+.btn:focus-visible{outline:3px solid var(--needle);outline-offset:3px}
+
+.rounds{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+.pip{height:34px;border-radius:6px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.pip.now{border-color:var(--ink);color:var(--ink)}
+.pip.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good);border-color:transparent}
+.pip.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);border-color:transparent}
+.pip.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);border-color:transparent}
+.how{color:var(--muted);font-size:.85rem;margin:0;text-align:center}
+@media (prefers-reduced-motion:no-preference){.dial .needle-g{transition:none}.ghost-g{transition:opacity .3s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Dial In</h1>
+    <div class="meta"><span>Round <b id="roundNo">1</b>/10</span><span>Score <b id="score">0</b></span><span>Best <b id="best">–</b></span></div>
+  </header>
+
+  <section class="card" aria-live="polite">
+    <div class="label" id="promptLabel">Set the dial to</div>
+    <div class="target" id="target">63<small>%</small></div>
+
+    <svg class="dial" id="dial" viewBox="0 0 400 230" role="slider" tabindex="0"
+         aria-label="Dial. Drag, or use arrow keys to turn." aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="Position hidden until you lock in">
+      <path class="arc" d="M 40 200 A 160 160 0 0 1 360 200"></path>
+      <line class="tick" x1="27" y1="200" x2="53" y2="200"></line>
+      <line class="tick" x1="347" y1="200" x2="373" y2="200"></line>
+      <text class="end" x="40" y="224" text-anchor="middle">0%</text>
+      <text class="end" x="360" y="224" text-anchor="middle">100%</text>
+      <path class="wedge" id="wedge" d="" hidden></path>
+      <g class="ghost-g" id="ghostG" hidden><line class="ghost" id="ghost" x1="200" y1="200" x2="200" y2="40"></line></g>
+      <line class="needle" id="needle" x1="200" y1="200" x2="200" y2="52"></line>
+      <circle class="grip" id="grip" cx="200" cy="52" r="9"></circle>
+      <circle class="hub" cx="200" cy="200" r="14"></circle>
+      <circle class="hubcap" cx="200" cy="200" r="5"></circle>
+    </svg>
+
+    <div class="result" id="result"><span class="hint">Drag the needle, then lock in your guess.</span></div>
+    <button class="btn" id="action" type="button">Lock in</button>
+  </section>
+
+  <div class="rounds" id="rounds" aria-label="Round scores"></div>
+  <p class="how">Points: 100 for a dead-on match, minus 4 for every percentage point off. Arrow keys nudge by 1, Shift+arrow by 10.</p>
+</div>
+
+<script>
+(function(){
+  const CX=200, CY=200, R=160, ROUNDS=10;
+  const $=id=>document.getElementById(id);
+  const dial=$('dial'), needle=$('needle'), grip=$('grip'), ghost=$('ghost'), ghostG=$('ghostG'), wedge=$('wedge');
+  const st={round:1,value:50,target:0,locked:false,score:0,history:[],done:false};
+
+  function pt(v,r){const t=Math.PI*(1-v/100);return [CX+r*Math.cos(t), CY-r*Math.sin(t)];}
+  function fmt(v){return (Math.round(v*10)/10).toFixed(1);}
+  function readBest(){try{const b=localStorage.getItem('dialin-best');return b===null?null:+b}catch(e){return null}}
+  function writeBest(v){try{localStorage.setItem('dialin-best',String(v))}catch(e){}}
+  function newTarget(){let t;do{t=Math.floor(Math.random()*101)}while(st.history.length&&Math.abs(t-st.history[st.history.length-1].target)<8);return t;}
+  function grade(p){return p>=85?'good':p>=55?'ok':'bad';}
+
+  function drawNeedle(){
+    const [x,y]=pt(st.value,148);
+    needle.setAttribute('x2',x);needle.setAttribute('y2',y);
+    grip.setAttribute('cx',x);grip.setAttribute('cy',y);
+    dial.setAttribute('aria-valuenow',Math.round(st.value));
+  }
+  function drawWedge(a,b){
+    const lo=Math.min(a,b),hi=Math.max(a,b);
+    const [x1,y1]=pt(lo,R+13),[x2,y2]=pt(hi,R+13);
+    wedge.setAttribute('d',`M ${CX} ${CY} L ${x1} ${y1} A ${R+13} ${R+13} 0 0 0 ${x2} ${y2} Z`);
+  }
+
+  function renderRounds(){
+    const box=$('rounds');box.innerHTML='';
+    for(let i=1;i<=ROUNDS;i++){
+      const d=document.createElement('div');const h=st.history[i-1];
+      d.className='pip'+(h?' '+grade(h.pts):(i===st.round&&!st.done?' now':''));
+      d.textContent=h?h.pts:i;box.appendChild(d);
+    }
+    $('roundNo').textContent=Math.min(st.round,ROUNDS);
+    $('score').textContent=st.score;
+    const b=readBest();$('best').textContent=b===null?'–':b;
+  }
+
+  function startRound(){
+    st.target=newTarget();st.locked=false;st.value=50;
+    $('promptLabel').textContent='Set the dial to';
+    $('target').innerHTML=st.target+'<small>%</small>';
+    $('result').innerHTML='<span class="hint">Drag the needle, then lock in your guess.</span>';
+    $('action').textContent='Lock in';
+    ghostG.hidden=true;wedge.hidden=true;
+    dial.setAttribute('aria-valuetext','Position hidden until you lock in');
+    drawNeedle();renderRounds();
+  }
+
+  function lockIn(){
+    st.locked=true;
+    const err=Math.abs(st.value-st.target);
+    const pts=Math.max(0,Math.round(100-err*4));
+    st.history.push({target:st.target,guess:st.value,pts});st.score+=pts;
+    const [gx,gy]=pt(st.target,R+16);ghost.setAttribute('x2',gx);ghost.setAttribute('y2',gy);
+    ghostG.hidden=false;drawWedge(st.value,st.target);wedge.hidden=err<0.3;
+    dial.setAttribute('aria-valuetext','You set '+fmt(st.value)+' percent');
+    $('result').innerHTML=
+      `<div class="stat"><span>You set</span><b>${fmt(st.value)}%</b></div>`+
+      `<div class="stat"><span>Off by</span><b>${fmt(err)}</b></div>`+
+      `<div class="pts ${grade(pts)}">+${pts}</div>`;
+    const last=st.round>=ROUNDS;
+    $('action').textContent=last?'See final score':'Next round';
+    renderRounds();
+  }
+
+  function finish(){
+    st.done=true;
+    const best=readBest();const isBest=best===null||st.score>best;
+    if(isBest)writeBest(st.score);
+    const avg=st.history.reduce((s,h)=>s+Math.abs(h.guess-h.target),0)/ROUNDS;
+    $('promptLabel').textContent=isBest?'New best score':'Final score';
+    $('target').innerHTML=st.score+'<small>/1000</small>';
+    $('result').innerHTML=`<div class="stat"><span>Average miss</span><b>${fmt(avg)} pts</b></div>`+
+      `<div class="stat"><span>Closest</span><b>${fmt(Math.min(...st.history.map(h=>Math.abs(h.guess-h.target))))}</b></div>`;
+    $('action').textContent='Play again';
+    renderRounds();
+  }
+
+  $('action').addEventListener('click',()=>{
+    if(st.done){st.round=1;st.score=0;st.history=[];st.done=false;startRound();return;}
+    if(!st.locked){lockIn();return;}
+    if(st.round>=ROUNDS){finish();return;}
+    st.round++;startRound();
+  });
+
+  // Dragging
+  function valueFromEvent(e){
+    const r=dial.getBoundingClientRect();
+    const sx=400/r.width, sy=230/r.height;
+    const x=(e.clientX-r.left)*sx-CX, y=CY-(e.clientY-r.top)*sy;
+    let t=Math.atan2(y,x);
+    if(t<0)t=(x>=0)?0:Math.PI; // below the baseline: snap to nearest end
+    return Math.min(100,Math.max(0,(1-t/Math.PI)*100));
+  }
+  let dragging=false;
+  dial.addEventListener('pointerdown',e=>{
+    if(st.locked||st.done)return;
+    dragging=true;dial.classList.add('dragging');dial.setPointerCapture(e.pointerId);
+    st.value=valueFromEvent(e);drawNeedle();e.preventDefault();
+  });
+  dial.addEventListener('pointermove',e=>{if(!dragging)return;st.value=valueFromEvent(e);drawNeedle();});
+  const end=()=>{dragging=false;dial.classList.remove('dragging');};
+  dial.addEventListener('pointerup',end);dial.addEventListener('pointercancel',end);
+
+  dial.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ $('action').click();e.preventDefault();return; }
+    if(st.locked||st.done)return;
+    const step=e.shiftKey?10:1;let d=0;
+    if(e.key==='ArrowRight'||e.key==='ArrowUp')d=step;
+    else if(e.key==='ArrowLeft'||e.key==='ArrowDown')d=-step;
+    else if(e.key==='Home'){st.value=0;}
+    else if(e.key==='End'){st.value=100;}
+    else return;
+    st.value=Math.min(100,Math.max(0,Math.round(st.value)+d));drawNeedle();e.preventDefault();
+  });
+
+  startRound();
+})();
+</script>
+
+</body></html>
